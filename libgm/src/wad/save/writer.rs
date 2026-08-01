@@ -108,20 +108,19 @@ impl<'a> DataWriter<'a> {
     /// Overwrites bytes at the given position in the internal data buffer.
     ///
     /// Useful for patching data like lengths or offsets after serialization.
-    fn overwrite_bytes(&mut self, bytes: &[u8], position: u32) -> Result<()> {
+    fn patch_bytes(&mut self, bytes: &[u8], position: u32) -> Result<()> {
         let start = position as usize;
         let end = start + bytes.len();
         if let Some(mut_slice) = self.raw_data.get_mut(start..end) {
             mut_slice.copy_from_slice(bytes);
-            Ok(())
-        } else {
-            Err(err!(
-                "Could not overwrite {} bytes at position {} in data with length {}; out of bounds",
-                bytes.len(),
-                position,
-                self.raw_data.len(),
-            ))
+            return Ok(());
         }
+        Err(err!(
+            "Could not overwrite {} bytes at position {} in data with length {}; out of bounds",
+            bytes.len(),
+            position,
+            self.raw_data.len(),
+        ))
     }
 
     /// Overwrites a 32-bit unsigned integer at the specified written data position.
@@ -129,12 +128,12 @@ impl<'a> DataWriter<'a> {
     /// Useful for patching fixed-size numeric values like lengths or offsets
     /// after serialization. For writing regular pointer lists normally, see
     /// [`Self::write_pointer_list`].
-    pub fn overwrite_u32(&mut self, number: u32, position: u32) -> Result<()> {
+    pub fn patch_u32(&mut self, number: u32, position: u32) -> Result<()> {
         let bytes: [u8; 4] = match self.gm_data.meta.endianness {
             Endianness::Little => number.to_le_bytes(),
             Endianness::Big => number.to_be_bytes(),
         };
-        self.overwrite_bytes(&bytes, position).ctx(|| {
+        self.patch_bytes(&bytes, position).ctx(|| {
             format!("overwriting 32-bit number {number} at target data position {position}")
         })
     }
@@ -148,26 +147,26 @@ impl<'a> DataWriter<'a> {
     /// For writing regular pointer lists normally, see
     /// [`Self::write_pointer_list`].
     #[inline]
-    pub fn overwrite_pointer_with_cur_pos(
+    pub fn patch_pointer_list(
         &mut self,
-        pointer_list_pos: u32,
+        pointer_list_start_pos: u32,
         element_index: usize,
     ) -> Result<()> {
         let number: u32 = self.pos();
-        let position: u32 = pointer_list_pos + 4 * element_index as u32;
-        self.overwrite_u32(number, position).ctx(|| {
+        let position: u32 = pointer_list_start_pos + 4 * element_index as u32;
+        self.patch_u32(number, position).ctx(|| {
             format!(
                 "overwriting pointer for element index {element_index} of pointer list with start \
-                 position {pointer_list_pos}"
+                 position {pointer_list_start_pos}"
             )
         })
     }
 
-    /// Write a GameMaker boolean as a 32-bit integer.
-    /// - If `true`, write `1_i32`.
-    /// - If `false`, write `0_i32`.
+    /// Writes a GameMaker boolean as a 32-bit integer.
+    ///
+    /// Writes `0` if `false` or `1` if `true`.
     #[inline]
     pub fn write_bool32(&mut self, boolean: bool) {
-        self.write_i32(boolean as i32);
+        self.write_u32(boolean as u32);
     }
 }

@@ -200,53 +200,53 @@ impl GMElement for EventGroups {
         // TODO: You have to make sure that there are no
         // empty [`SubEvent`]s, otherwise (old) runners segfault.
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 0)?;
+        writer.patch_pointer_list(pointer_list_pos, 0)?;
         writer.write_pointer_list(&self.create)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 1)?;
+        writer.patch_pointer_list(pointer_list_pos, 1)?;
         writer.write_pointer_list(&self.destroy)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 2)?;
+        writer.patch_pointer_list(pointer_list_pos, 2)?;
         writer.write_pointer_list(&self.alarm)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 3)?;
+        writer.patch_pointer_list(pointer_list_pos, 3)?;
         writer.write_pointer_list(&self.step)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 4)?;
+        writer.patch_pointer_list(pointer_list_pos, 4)?;
         writer.write_pointer_list(&self.collision)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 5)?;
+        writer.patch_pointer_list(pointer_list_pos, 5)?;
         writer.write_pointer_list(&self.keyboard)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 6)?;
+        writer.patch_pointer_list(pointer_list_pos, 6)?;
         writer.write_pointer_list(&self.mouse)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 7)?;
+        writer.patch_pointer_list(pointer_list_pos, 7)?;
         writer.write_pointer_list(&self.other)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 8)?;
+        writer.patch_pointer_list(pointer_list_pos, 8)?;
         writer.write_pointer_list(&self.draw)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 9)?;
+        writer.patch_pointer_list(pointer_list_pos, 9)?;
         writer.write_pointer_list(&self.key_press)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 10)?;
+        writer.patch_pointer_list(pointer_list_pos, 10)?;
         writer.write_pointer_list(&self.key_release)?;
 
-        writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 11)?;
+        writer.patch_pointer_list(pointer_list_pos, 11)?;
         writer.write_pointer_list(&self.trigger)?;
 
         if count > 12 {
-            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 12)?;
+            writer.patch_pointer_list(pointer_list_pos, 12)?;
             writer.write_pointer_list(&self.cleanup)?;
         }
 
         if count > 13 {
-            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 13)?;
+            writer.patch_pointer_list(pointer_list_pos, 13)?;
             writer.write_pointer_list(&self.gesture)?;
         }
         if count > 14 {
-            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, 14)?;
+            writer.patch_pointer_list(pointer_list_pos, 14)?;
             writer.write_pointer_list(&self.pre_create)?;
         }
 

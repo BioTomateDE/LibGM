@@ -42,7 +42,7 @@ impl GMElement for Audios {
         }
 
         for (idx, audio) in self.elems.iter().enumerate() {
-            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, idx)?;
+            writer.patch_pointer_list(pointer_list_pos, idx)?;
             writer.write_usize(audio.data.len())?;
             writer.write_bytes(&audio.data);
             if idx != count - 1 {

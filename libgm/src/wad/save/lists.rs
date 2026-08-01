@@ -65,8 +65,7 @@ impl DataWriter<'_> {
 
         for (i, element) in elements.iter().enumerate() {
             element.serialize_pre_padding(self).ctx(ctx)?;
-            self.overwrite_pointer_with_cur_pos(pointer_list_pos, i)
-                .ctx(ctx)?;
+            self.patch_pointer_list(pointer_list_pos, i).ctx(ctx)?;
             element.serialize(self).ctx(ctx)?;
         }
         Ok(())
@@ -92,8 +91,7 @@ impl DataWriter<'_> {
         for (i, element_opt) in elements.iter().enumerate() {
             let Some(element) = element_opt else { continue };
             element.serialize_pre_padding(self).ctx(ctx)?;
-            self.overwrite_pointer_with_cur_pos(pointer_list_pos, i)
-                .ctx(ctx)?;
+            self.patch_pointer_list(pointer_list_pos, i).ctx(ctx)?;
             element.serialize(self).ctx(ctx)?;
         }
         Ok(())

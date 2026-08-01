@@ -117,7 +117,7 @@ impl GMElement for GameObjects {
         }
 
         for (gm_ref, obj) in self.element_refs() {
-            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, gm_ref.index as usize)?;
+            writer.patch_pointer_list(pointer_list_pos, gm_ref.index as usize)?;
 
             writer.write_gm_string(obj.name)?;
             writer.write_resource_id(obj.sprite);

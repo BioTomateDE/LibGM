@@ -126,7 +126,7 @@ fn serialize(data: &GMData) -> Result<Vec<u8>> {
 
     // Overwrite data length placeholder
     let data_length = writer.pos() - 8; // FORM is excluded
-    writer.overwrite_u32(data_length, 4)?; // Pos 4 the length spec in FORM
+    writer.patch_u32(data_length, 4)?; // Pos 4 the length spec in FORM
 
     log::trace!("Building data file took {stopwatch}");
 

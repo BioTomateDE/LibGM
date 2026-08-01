@@ -72,9 +72,7 @@ impl GMElement for Tilesets {
             if self.align {
                 writer.align(ALIGNMENT);
             }
-            writer
-                .overwrite_pointer_with_cur_pos(pointer_list_pos, i)
-                .ctx(ctx)?;
+            writer.patch_pointer_list(pointer_list_pos, i).ctx(ctx)?;
             writer.write_elem(tileset).ctx(ctx)?;
         }
         Ok(())

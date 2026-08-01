@@ -57,7 +57,7 @@ impl GMElement for Strings {
             if self.align {
                 writer.align(ALIGNMENT);
             }
-            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, idx)?;
+            writer.patch_pointer_list(pointer_list_pos, idx)?;
             writer.write_u32(string.len() as u32);
             writer.resolve_pointer(string)?;
             writer.write_bytes(string.as_bytes());

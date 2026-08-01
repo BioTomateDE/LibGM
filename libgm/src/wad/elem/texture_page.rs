@@ -95,7 +95,7 @@ impl GMElement for TexturePages {
         let mut texture_block_size_placeholders = vec![0u32; count];
 
         for (i, texture_page) in self.elems.iter().enumerate() {
-            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
+            writer.patch_pointer_list(pointer_list_pos, i)?;
 
             writer.write_u32(texture_page.scaled);
             writer.write_if_ver(
@@ -137,7 +137,7 @@ impl GMElement for TexturePages {
                 .ctx("serializing texture page image")?;
             if writer.version() >= GMVersion::GM2022_3 {
                 let length: u32 = writer.pos() - start_pos;
-                writer.overwrite_u32(length, texture_block_size_placeholders[i])?;
+                writer.patch_u32(length, texture_block_size_placeholders[i])?;
             }
         }
 

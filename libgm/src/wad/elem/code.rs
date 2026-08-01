@@ -172,7 +172,7 @@ impl GMElement for Codes {
         // WAD < 15 my beloved
         if writer.version() < GMVersion::Wad15 {
             for (i, code) in self.elems.iter().enumerate() {
-                writer.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
+                writer.patch_pointer_list(pointer_list_pos, i)?;
                 writer.write_gm_string(code.name)?;
                 let length_placeholder_pos = writer.pos();
                 writer.write_u32(0xDEAD_C0DE);
@@ -186,7 +186,7 @@ impl GMElement for Codes {
                 }
 
                 let code_length = writer.pos() - start;
-                writer.overwrite_u32(code_length, length_placeholder_pos)?;
+                writer.patch_u32(code_length, length_placeholder_pos)?;
             }
             return Ok(());
         }
@@ -215,7 +215,7 @@ impl GMElement for Codes {
         }
 
         for (i, code) in self.elems.iter().enumerate() {
-            writer.overwrite_pointer_with_cur_pos(pointer_list_pos, i)?;
+            writer.patch_pointer_list(pointer_list_pos, i)?;
             let (start, end) = instructions_ranges[i];
             let length: u32 = end - start;
             let data: &ModernCodeData = code.modern_data.as_ref().ok_or_else(|| {
@@ -896,7 +896,7 @@ fn write_variable_occurrence(
         let last_occurrence_pos = last_chain_value & 0x07FF_FFFF;
         let offset: u32 = occurrence_pos - last_occurrence_pos;
         let value = offset | last_chain_value & 0xF800_0000;
-        writer.overwrite_u32(value, last_occurrence_pos + 4)?;
+        writer.patch_u32(value, last_occurrence_pos + 4)?;
     }
 
     // Write the Name String ID (the index of the string, not a pointer) together with the reference type.
@@ -926,7 +926,7 @@ fn write_function_occurrence(
         if offset & 0xF800_0000 != 0 {
             bail!("Occurrence offset {offset} (0x{offset:08X}) is too large (max is 0x07FFFFFF)");
         }
-        writer.overwrite_u32(offset, last_occurrence_pos + 4)?;
+        writer.patch_u32(offset, last_occurrence_pos + 4)?;
     }
 
     writer.write_u32(func.name.index as u32);

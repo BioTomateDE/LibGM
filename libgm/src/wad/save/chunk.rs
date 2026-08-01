@@ -52,7 +52,7 @@ impl DataWriter<'_> {
 
         // Resolve chunk length placeholder
         let chunk_length: u32 = self.pos() - start_pos;
-        self.overwrite_u32(chunk_length, length_pos)
+        self.patch_u32(chunk_length, length_pos)
             .expect("Chunk length overwrite position out of bounds");
 
         log::trace!("Building chunk {name} took {stopwatch}");
@@ -65,6 +65,6 @@ impl DataWriter<'_> {
         let last = self.last_chunk.clone();
         let chunk_length = last.padding_start_pos - last.length_pos - 4;
         self.raw_data.truncate(last.padding_start_pos as usize);
-        self.overwrite_u32(chunk_length, last.length_pos).unwrap();
+        self.patch_u32(chunk_length, last.length_pos).unwrap();
     }
 }

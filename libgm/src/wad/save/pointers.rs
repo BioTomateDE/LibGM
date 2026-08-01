@@ -196,7 +196,7 @@ impl DataWriter<'_> {
 
             // Overwrite the `0xDEAD_C0DE` placeholder.
             // This `?` should never fail.
-            self.overwrite_u32(resource_data_pos, placeholder_data_pos)?;
+            self.patch_u32(resource_data_pos, placeholder_data_pos)?;
         }
 
         log::trace!(
