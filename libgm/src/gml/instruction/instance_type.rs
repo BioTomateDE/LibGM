@@ -170,8 +170,8 @@ impl InstanceType {
     /// If the game object reference is erroneously higher
     /// than [`i16::MAX`], you will be boiled (truncated).
     #[must_use]
-    pub fn encode(self, ref_type: ReferenceType) -> i16 {
-        if ref_type != ReferenceType::Normal {
+    pub const fn encode(self, ref_type: ReferenceType) -> i16 {
+        if !matches!(ref_type, ReferenceType::Normal | ReferenceType::Instance) {
             // yeah the instance type is lost with non-standard reference types.
             // why? idfk.
             return 0;
@@ -195,7 +195,7 @@ impl InstanceType {
     /// Encodes this instance type into an [`i16`], assuming that the variable reference type is normal.
     #[inline]
     #[must_use]
-    pub fn encode_normal(self) -> i16 {
+    pub const fn encode_normal(self) -> i16 {
         self.encode(ReferenceType::Normal)
     }
 

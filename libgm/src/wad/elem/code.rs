@@ -699,25 +699,20 @@ fn encode_push(writer: &mut DataWriter, opcode: u8, value: PushValue) -> Result<
 
     match value {
         PushValue::Short(_) => {} // Nothing because it was already written inside the instruction
-        PushValue::Int(int32) => writer.write_i32(int32),
-        PushValue::Long(int64) => writer.write_i64(int64),
+        PushValue::Int(int) => writer.write_i32(int),
+        PushValue::Long(long) => writer.write_i64(long),
         PushValue::Double(double) => writer.write_f64(double),
         PushValue::Bool(boolean) => writer.write_bool32(boolean),
-        PushValue::String(string) => {
-            writer.write_resource_id(string);
-        }
-        PushValue::Variable(code_variable) => {
-            write_variable_occurrence(
-                writer,
-                code_variable.variable,
-                instr_pos,
-                code_variable.ref_type,
-            )
-            .ctx("writing variable occurrence for push instruction")?;
-        }
-        PushValue::Function(func_ref) => {
-            write_function_occurrence(writer, func_ref, instr_pos)?;
-        }
+        PushValue::String(string) => writer.write_resource_id(string),
+        PushValue::Variable(code_variable) => write_variable_occurrence(
+            writer,
+            code_variable.variable,
+            instr_pos,
+            code_variable.ref_type,
+        )
+        .ctx("writing variable occurrence for push instruction")?,
+        PushValue::Function(func_ref) => write_function_occurrence(writer, func_ref, instr_pos)
+            .ctx("writing function occurrence for push instruction")?,
     }
     Ok(())
 }
@@ -750,7 +745,8 @@ fn encode_call(
     writer.write_u8(DataType::Int.encode());
     writer.write_u8(opcode);
 
-    write_function_occurrence(writer, function, instr_pos)?;
+    write_function_occurrence(writer, function, instr_pos)
+        .ctx("writing function occurrence for call instruction")?;
     Ok(())
 }
 
@@ -791,8 +787,8 @@ impl GMElement for AssetReference {
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
         if let Self::Function(func_ref) = *self {
             let pos = writer.pos() - 4;
-            write_function_occurrence(writer, func_ref, pos)?;
-            return Ok(());
+            return write_function_occurrence(writer, func_ref, pos)
+                .ctx("writing function occurrence for pushref instruction");
         }
 
         let raw =
