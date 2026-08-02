@@ -180,7 +180,7 @@ impl<'a> DataReader<'a> {
         match number {
             0 => Ok(false),
             1 => Ok(true),
-            n => bail!("Invalid boolean value {n} (0x{n:08X}) at position {}", self.cur_pos - 4,),
+            n => bail!("Invalid boolean value {n} (0x{n:08X}) at position {}", self.cur_pos - 4),
         }
     }
 

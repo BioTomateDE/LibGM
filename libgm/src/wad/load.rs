@@ -325,7 +325,6 @@ fn read_bytecode_chunks(reader: &mut DataReader) -> Result<(Codes, Functions, Va
     }
 }
 
-#[expect(clippy::too_many_lines)]
 fn deserialize(raw_data: &[u8], options: &LoadingOptions) -> Result<GMData> {
     let stopwatch = Stopwatch::start();
     let mut reader: DataReader = read_form(raw_data, options.clone()).ctx("parsing FORM")?;

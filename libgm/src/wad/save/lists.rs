@@ -14,8 +14,7 @@ impl DataWriter<'_> {
         write_context: T::WriteContext,
     ) -> Result<()> {
         let count: usize = elements.len();
-        let ctx =
-            || format!("building simple list of {} with {} elements", typename::<T>(), count,);
+        let ctx = || format!("building simple list of {} with {} elements", typename::<T>(), count);
 
         self.write_usize(count).ctx(ctx)?;
         for element in elements {
@@ -31,9 +30,8 @@ impl DataWriter<'_> {
 
     pub fn write_simple_list_short<T: GMElement>(&mut self, elements: &Vec<T>) -> Result<()> {
         let count: usize = elements.len();
-        let ctx = || {
-            format!("building short simple list of {} with {} elements", typename::<T>(), count,)
-        };
+        let ctx =
+            || format!("building short simple list of {} with {} elements", typename::<T>(), count);
 
         let count: u16 =
             count.try_into().map_err(|_| "Cannot fit element count into 16 bits").ctx(ctx)?;
@@ -53,7 +51,7 @@ impl DataWriter<'_> {
     ) -> Result<()> {
         let count: usize = elements.len();
         let ctx =
-            || format!("building pointer list of {} with {} elements", typename::<T>(), count,);
+            || format!("building pointer list of {} with {} elements", typename::<T>(), count);
 
         self.write_usize(count).ctx(ctx)?;
         let pointer_list_pos: u32 = self.pos();
@@ -83,7 +81,7 @@ impl DataWriter<'_> {
     ) -> Result<()> {
         let count: usize = elements.len();
         let ctx = || {
-            format!("building nullable pointer list of {} with {} elements", typename::<T>(), count,)
+            format!("building nullable pointer list of {} with {} elements", typename::<T>(), count)
         };
 
         self.write_usize(count).ctx(ctx)?;

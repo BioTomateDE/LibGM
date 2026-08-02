@@ -239,7 +239,7 @@ pub(crate) fn validate_names<T: GMAssetListChunk>(chunk: &T, gm_strings: &String
         let name = item.name(gm_strings)?;
 
         item.validate_name(gm_strings)
-            .ctx(|| format!("validating {} with name {:?}", typename::<T::Element>(), name,))?;
+            .ctx(|| format!("validating {} with name {:?}", typename::<T::Element>(), name))?;
 
         let Some(first_index) = seen.insert(name, i) else {
             continue;

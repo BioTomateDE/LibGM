@@ -148,7 +148,7 @@ pub fn disassemble_instruction_to_buffer(
         }
 
         Instruction::DuplicateSwap { data_type, size1, size2 } => {
-            write!(buffer, "{}.{} {} {}", mnemonic, data_type.as_char(), size1, size2,);
+            write!(buffer, "{}.{} {} {}", mnemonic, data_type.as_char(), size1, size2);
         }
 
         Instruction::Branch { jump_offset }

@@ -83,7 +83,7 @@ pub fn assemble_instruction(line: &str, gm_data: &GMData) -> Result<Instruction>
     let instruction = parse_instruction(&mut reader, mnemonic, types, gm_data)?;
 
     if !reader.is_empty() && !reader.line.trim_start().starts_with('#') {
-        bail!("Expected end of line; found remaining string {:?}", reader.line,);
+        bail!("Expected end of line; found remaining string {:?}", reader.line);
     }
 
     Ok(instruction)

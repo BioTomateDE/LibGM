@@ -96,7 +96,7 @@ impl DataReader<'_> {
                     )
                 })?;
             let Some(element) = element_opt else {
-                bail!("Element {}/{} of {} pointer list is null", i, count, typename::<T>(),)
+                bail!("Element {}/{} of {} pointer list is null", i, count, typename::<T>())
             };
             elements.push(element);
         }

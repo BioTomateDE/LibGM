@@ -150,7 +150,7 @@ impl<'a> Reader<'a> {
 
         let integer: &str = self.consume_to(end);
         let integer: T = integer.parse().ok().ok_or_else(|| {
-            format!("Integer {} is out of bounds for integer type {}", integer, typename::<T>(),)
+            format!("Integer {} is out of bounds for integer type {}", integer, typename::<T>())
         })?;
 
         Ok(integer)

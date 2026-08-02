@@ -4,14 +4,14 @@ Cargo.lock
 .idea
 .vscode
 
-**/*.win
-**/*.unx
-**/*.droid
-**/*.ios
+*.win
+*.unx
+*.droid
+*.ios
 
-**/*.win1
-**/*.unx1
+*.win1
+*.unx1
 
-**/*.bin
+*.bin
 
-**/*.DS_Store
+*.DS_Store
