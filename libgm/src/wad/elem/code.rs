@@ -23,6 +23,7 @@ use crate::wad::GMVersion;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::elem::function::Function;
+use crate::wad::elem::string::Strings;
 use crate::wad::elem::variable::Variable;
 use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
@@ -31,6 +32,39 @@ use crate::wad::save::writer::DataWriter;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Codes {
     pub elems: Vec<Code>,
+}
+
+impl Codes {
+    /// Finds a code entry by its mangled name.
+    ///
+    /// This function exists for convenience, you should try to get code entries via
+    /// scripts or game object events when possible for stability.
+    pub fn ref_by_name(&self, name: &str, gm_strings: &Strings) -> Result<GMRef<Code>> {
+        for (gmref, code) in self.element_refs() {
+            let code_name = gm_strings.by_ref(code.name)?;
+            if name == code_name {
+                return Ok(gmref);
+            }
+        }
+        Err(err!("Could not find code entry with name {name:?}"))
+    }
+
+    /// Finds a code entry by its mangled name.
+    ///
+    /// This function exists for convenience, you should try to get code entries via
+    /// scripts or game object events when possible for stability.
+    pub fn by_name(&self, name: &str, gm_strings: &Strings) -> Result<&Code> {
+        self.ref_by_name(name, gm_strings).map(|gmref| self.by_ref(gmref).unwrap())
+    }
+
+    
+    /// Finds a code entry by its mangled name.
+    ///
+    /// This function exists for convenience, you should try to get code entries via
+    /// scripts or game object events when possible for stability.
+    pub fn by_name_mut(&mut self, name: &str, gm_strings: &Strings) -> Result<&mut Code> {
+        self.ref_by_name(name, gm_strings).map(|gmref| self.by_ref_mut(gmref).unwrap())
+    }
 }
 
 gm_list_chunk!(CODE, Codes, Code);

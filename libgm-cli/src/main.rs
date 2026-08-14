@@ -50,13 +50,13 @@ fn handle_file(path: &Path, args: &Args) -> Result<Duration> {
         print_diffs(&data, &data2);
     }
 
-    // for code_name in &args.codes {
-    //     let code = data.codes.by_name(code_name, &data.strings)?;
-    //     let assembly = disassemble_code(code, &data)?;
-    //     println!("===== {code_name} =====");
-    //     println!("{assembly}");
-    //     println!();
-    // }
+    for code_name in &args.codes {
+        let code = data.codes.by_name(code_name, &data.strings)?;
+        let assembly = libgm::gml::assembly::disassemble_code(code, &data)?;
+        println!("===== {code_name} =====");
+        println!("{assembly}");
+        println!();
+    }
 
     if args.dump_sprites {
         dump::dump_sprites(&data)?;

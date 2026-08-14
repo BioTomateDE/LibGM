@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::hint::cold_path;
 
 use crate::prelude::*;
+use crate::util::fmt::typename;
 use crate::wad::elem::texture_page_item::TexturePageItem;
 use crate::wad::load::reader::DataReader;
 use crate::wad::reference::GMRef;
@@ -10,7 +11,7 @@ use crate::wad::reference::GMRef;
 impl<'a> DataReader<'a> {
     /// Read a standard GameMaker string reference.
     pub fn read_gm_string(&mut self) -> Result<GMRef<String>> {
-        let occurrence_position = self.read_u32()?;
+        let occurrence_position = self.read_u32().ctx("reading string pointer")?;
         if occurrence_position == 0 {
             return Ok(GMRef::none());
         }
@@ -55,7 +56,7 @@ impl<'a> DataReader<'a> {
     }
 
     pub fn read_gm_texture(&mut self) -> Result<GMRef<TexturePageItem>> {
-        let occurrence_position = self.read_u32()?;
+        let occurrence_position = self.read_u32().ctx("reading texture page item pointer")?;
         if occurrence_position == 0 {
             return Ok(GMRef::none());
         }
@@ -65,24 +66,25 @@ impl<'a> DataReader<'a> {
             return Ok(tpag_ref);
         }
 
-        cold_path();
-        Err(err!(
+        bail!(
             "Could not read texture page item with occurrence position {} at pointer position {} \
              because it doesn't exist in the occurrence map with {} items",
             occurrence_position,
             self.cur_pos - 4,
             map.len(),
-        ))
+        )
     }
 
     pub fn read_resource_by_id<T>(&mut self) -> Result<GMRef<T>> {
-        let number = self.read_i32()?;
+        let ctx = || format!("reading {} resource by ID", typename::<T>());
+
+        let number = self.read_i32().ctx(ctx)?;
         if number == -1 {
             return Ok(GMRef::none());
         }
         if let Err(e) = check_resource_limit(number as u32) {
             if self.options.verify_constants {
-                return Err(e).ctx("parsing resource by id");
+                return Err(e).ctx(ctx);
             }
             log::warn!("{e}");
         }
