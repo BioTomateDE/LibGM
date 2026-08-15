@@ -212,7 +212,6 @@ impl Default for GMData {
         let general_info = GeneralInfo {
             debugger_enabled: false,
             wad_version: 17,
-            unknown_value: 0,
             runner_file_name: strings.make("libgm_game"),
             config: strings.make("Default"),
             last_instance_id: 100_000,

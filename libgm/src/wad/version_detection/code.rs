@@ -8,6 +8,9 @@ use crate::wad::chunk::ChunkName;
 use crate::wad::load::reader::DataReader;
 use crate::wad::version::GMVersion;
 
+// TODO: this check is extremely slow (like 500 ms in release mode).
+// needs to be optimized or removed if possible
+
 pub fn check_2023_8_and_2024_4(reader: &mut DataReader) -> Result<Option<GMVersion>> {
     fn get_chunk_elem_count(
         reader: &mut DataReader,

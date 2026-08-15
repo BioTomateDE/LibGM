@@ -93,8 +93,8 @@ fn create_version_checks() -> [VersionCheck; 24] {
         VersionCheck::new(ACRV, acrv::check_2_3_1, GMS2_3, GMS2_3_1),
         VersionCheck::new(BGND, bgnd::check_2024_14_1, GM2024_13, GM2024_14_1),
         VersionCheck::new(FUNC, func::check_2024_8, Wad14, GM2024_8),
-        VersionCheck::new(CODE, code::check_2023_8_and_2024_4, Wad15, GM2024_4),
         VersionCheck::new(FONT, font::check_2022_2, GMS2_2_1, GM2022_2),
+        VersionCheck::new(CODE, code::check_2023_8_and_2024_4, Wad15, GM2024_4),
     ]
 }
 

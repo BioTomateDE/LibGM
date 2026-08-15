@@ -42,9 +42,6 @@ pub struct GeneralInfo {
     /// See [`GMVersion`] for the real format version.
     pub wad_version: u8,
 
-    /// Maybe this is just padding bytes?
-    pub unknown_value: u16,
-
     /// The file name of the runner (on Windows).
     ///
     /// This is probably ignored by the runner.
@@ -149,16 +146,18 @@ impl GMElement for GeneralInfo {
     // be sure not to use `reader.general_info` here, as it is not initialized yet!
     // this includes methods like `deserialize_if_gm_version`.
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
-        let debugger_enabled: bool = match reader.read_u8()? {
+        let word = reader.read_u32()?;
+        let debugger_enabled: bool = match word & 0xFF {
             1 => false,
             0 => true,
             other => bail!("Invalid 'Is Debugger Disabled' u8 bool {other}"),
         };
-        let wad_version = reader.read_u8()?;
-        let unknown_value = reader.read_u16()?;
-        let game_file_name: GMRef<String> = reader.read_gm_string()?;
+        let wad_version: u8 = (word >> 8) as u8;
+        reader.assert_int(word >> 16, 0, "Remaining bytes in first GEN8 word")?;
+
+        let runner_file_name: GMRef<String> = reader.read_gm_string()?;
         let config: GMRef<String> = reader.read_gm_string()?;
-        let last_object_id = reader.read_u32()?;
+        let last_instance_id = reader.read_u32()?;
         let last_tile_id = reader.read_u32()?;
         let game_id = reader.read_u32()?;
         let directplay_guid: [u8; 16] = *reader.read_bytes_const().ctx("reading GUID")?;
@@ -189,10 +188,9 @@ impl GMElement for GeneralInfo {
         let mut general_info = Self {
             debugger_enabled,
             wad_version,
-            unknown_value,
-            runner_file_name: game_file_name,
+            runner_file_name,
             config,
-            last_instance_id: last_object_id,
+            last_instance_id,
             last_tile_id,
             game_id,
             directplay_guid: Blob(directplay_guid),
@@ -221,9 +219,8 @@ impl GMElement for GeneralInfo {
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
-        writer.write_u8(!self.debugger_enabled as u8);
-        writer.write_u8(self.wad_version);
-        writer.write_u16(self.unknown_value);
+        let word = (!self.debugger_enabled as u32) | (self.wad_version as u32) << 8;
+        writer.write_u32(word);
         writer.write_gm_string(self.runner_file_name)?;
         writer.write_gm_string(self.config)?;
         writer.write_u32(self.last_instance_id);
@@ -259,7 +256,6 @@ impl Default for GeneralInfo {
         Self {
             debugger_enabled: false,
             wad_version: 17,
-            unknown_value: 0,
             runner_file_name: GMRef::none(),
             config: GMRef::none(), // should be "Default"
             last_instance_id: 100_000,
