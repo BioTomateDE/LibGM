@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use crate::prelude::*;
 use crate::util::assert;
+use crate::wad::GMVersion;
 use crate::wad::chunk::gm_list_chunk;
 use crate::wad::elem::GMElement;
 use crate::wad::load::reader::DataReader;
 use crate::wad::save::writer::DataWriter;
 
-const ALIGNMENT: u32 = 4;
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Strings {
     pub elems: Vec<String>,
-    pub align: bool,
 }
 
 gm_list_chunk!(STRG, Strings, String);
@@ -21,13 +19,12 @@ impl GMElement for Strings {
     // this includes methods like `deserialize_if_gm_version`.
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
-        let align: bool = pointers.iter().all(|&p| p.is_multiple_of(ALIGNMENT));
 
         let mut elems: Vec<String> = Vec::with_capacity(pointers.len());
 
         for (i, pointer) in pointers.into_iter().enumerate() {
-            if align {
-                reader.align(ALIGNMENT)?;
+            if reader.version >= GMVersion::GMS2_3 {
+                reader.align(4)?;
             }
             reader.assert_pos(pointer, "String")?;
             let gmref = GMRef::from(i);
@@ -41,7 +38,7 @@ impl GMElement for Strings {
         }
 
         reader.align(0x80)?;
-        Ok(Self { elems, align })
+        Ok(Self { elems })
     }
 
     fn serialize(&self, writer: &mut DataWriter) -> Result<()> {
@@ -54,8 +51,8 @@ impl GMElement for Strings {
         }
 
         for (idx, string) in self.elems.iter().enumerate() {
-            if self.align {
-                writer.align(ALIGNMENT);
+            if writer.version() >= GMVersion::GMS2_3 {
+                writer.align(4);
             }
             writer.patch_pointer_list(pointer_list_pos, idx)?;
             writer.write_u32(string.len() as u32);
