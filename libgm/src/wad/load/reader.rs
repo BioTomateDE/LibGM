@@ -210,16 +210,21 @@ impl<'a> DataReader<'a> {
     pub fn align(&mut self, alignment: u32) -> Result<()> {
         let start_pos = self.cur_pos;
         let end_pos: u32 = self.cur_pos.next_multiple_of(alignment);
+        if cfg!(not(feature = "check-integrity")) {
+            self.cur_pos = end_pos;
+            return Ok(());
+        }
         let byte_count: u32 = end_pos - self.cur_pos;
-        let context = || format!("aligning to a multiple of {alignment} bytes");
-        let bytes: &[u8] = self.read_bytes_dyn(byte_count).ctx(context)?;
-        if bytes.iter().all(|&b| b == 0) {
+        if let Ok(bytes) = self.read_bytes_dyn(byte_count)
+            && bytes.iter().all(|&b| b == 0)
+        {
             return Ok(());
         }
 
-        let error = format!("Found misaligned data at position {start_pos}");
+        let error = err!("Found misaligned data at position {start_pos}")
+            .with_context(|| format!("aligning to a multiple of {alignment} bytes"));
         if self.options.verify_alignment {
-            return Err(Error::new(error).with_context(context));
+            return Err(error);
         }
 
         // lenient mode: cancel aligning; go back and try to read the data. will probably not work.
