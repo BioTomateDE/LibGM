@@ -101,12 +101,13 @@ fn create_version_checks() -> [VersionCheck; 24] {
 fn init_by_gen8(reader: &mut DataReader) -> Result<GMVersion> {
     reader.chunk = reader.chunks.get(GEN8).ok_or("Chunk GEN8 does not exist")?;
 
-    reader.cur_pos = reader.chunk.start_pos + 1; // Skip to WAD version
-    let wad_version = reader.read_u8().ctx("reading WAD version")?;
-    reader.cur_pos += 42; // Skip to IDE version
+    reader.cur_pos = reader.chunk.start_pos;
+    let word = reader.read_u32().ctx("reading first word in GEN8")?;
+    let wad_version = (word >> 8) as u8;
+    reader.cur_pos += 40; // Skip to IDE version
     let ide_version = IdeVersion::deserialize(reader).ctx("reading IDE version")?;
     reader.cur_pos += 40; // Skip to Display Name
-    let name: &str = reader.force_read_string()?;
+    let name: &str = reader.force_read_string().unwrap_or("<invalid string pointer>");
 
     log::debug!("Loading {name:?} (IDE v{ide_version}, WAD {wad_version})");
 

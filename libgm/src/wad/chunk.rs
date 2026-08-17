@@ -85,6 +85,14 @@ impl ChunkName {
             b"TXTR" => Self::TXTR,
             b"UILR" => Self::UILR,
             b"VARI" => Self::VARI,
+            // unused / weird chunks
+            b"GEN7" => bail!("Found GEN7 chunk, please report this"), // alternative unusd GEN8
+            b"GENL" => bail!("Found GENL chunk, please report this"), // alternative unusd GEN8
+            b"PSPS" => bail!("PlayStation 3 chunk PSPS is not supported"),
+            b"STAT" => bail!("Xbox One chunk STAT is not supported"),
+            b"DBGI" => bail!("Debug chunk DBGI is not supported for normal data files"),
+            b"INST" => bail!("Debug chunk INST is not supported for normal data files"),
+            b"LOCL" => bail!("Debug chunk LOCL is not supported for normal data files"),
             _ => {
                 let hex = hexdump(&bytes);
                 if let Ok(string) = str::from_utf8(&bytes) {
