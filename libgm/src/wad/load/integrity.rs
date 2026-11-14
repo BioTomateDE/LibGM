@@ -20,14 +20,11 @@ impl DataReader<'_> {
             return Ok(());
         }
 
+        let cur = self.cur_pos;
+        let diff = i64::from(position) - i64::from(self.cur_pos);
         self.cur_pos = position;
         self.handle_invalid_align(format!(
-            "{} pointer is misaligned: expected position {} but reader is actually at {} (diff: \
-             {})",
-            pointer_name,
-            position,
-            self.cur_pos,
-            i64::from(position) - i64::from(self.cur_pos),
+            "{pointer_name} pointer is misaligned: expected position {position} but reader is actually at {cur} (diff: {diff})"
         ))
     }
 
