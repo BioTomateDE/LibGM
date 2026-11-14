@@ -37,19 +37,21 @@ gm_asset_list_chunk!(BGND, Tilesets, Tileset);
 impl GMElement for Tilesets {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let pointers: Vec<u32> = reader.read_simple_list()?;
+        let count = pointers.len();
         let align = pointers.iter().all(|&p| p % ALIGNMENT == 0);
-        let mut elems: Vec<Option<Tileset>> = vec![None; pointers.len()];
+        let mut elems: Vec<Option<Tileset>> = vec![None; count];
 
         for (idx, pointer) in pointers.into_iter().enumerate() {
             if pointer == 0 {
                 continue;
             }
-            if align {
-                reader.align(ALIGNMENT)?;
-            }
 
-            reader.assert_pos(pointer, "Tileset Pointer")?;
-            let tileset = reader.read_elem_ctx(())?;
+            let ctx = || format!("deserializing tileset {idx}/{count}");
+            if align {
+                reader.align(ALIGNMENT).ctx(ctx)?;
+            }
+            reader.assert_pos(pointer, "Tileset Pointer").ctx(ctx)?;
+            let tileset = reader.read_elem_ctx(()).ctx(ctx)?;
             elems[idx] = Some(tileset);
         }
 
