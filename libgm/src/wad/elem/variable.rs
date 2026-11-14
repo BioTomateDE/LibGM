@@ -119,7 +119,14 @@ pub struct ModernVarData {
 impl GMElement for ModernVarData {
     fn deserialize(reader: &mut DataReader) -> Result<Self> {
         let variable_type: i32 = reader.read_i32()?;
-        let variable_type = VariableType::decode(variable_type)?;
+        let variable_type = match VariableType::decode(variable_type) {
+            Ok(x) => x,
+            Err(e) if reader.options.verify_constants => return Err(e),
+            Err(e) => {
+                log::warn!("{e}; falling back to variable type Self");
+                VariableType::Self_
+            }
+        };
         let variable_id = reader.read_i32()?;
         Ok(Self { variable_type, variable_id })
     }

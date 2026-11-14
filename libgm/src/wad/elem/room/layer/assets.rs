@@ -67,7 +67,7 @@ impl GMElement for Assets {
                 nine_slices = reader.read_pointer_list()?;
             }
             if reader.version >= GMVersion::GM2023_2 {
-                reader.assert_pos(particle_systems_pointer, "Particle Systems")?;
+                reader.assert_pos(particle_systems_pointer, "Room Particle Systems")?;
                 particle_systems = reader.read_pointer_list()?;
             }
 
