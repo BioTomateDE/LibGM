@@ -36,7 +36,7 @@ bitflags::bitflags! {
         const STUDIO_VERSION_3 = 0x800;
         const STUDIO_VERSION_4 = 0x600;
 
-        /// Whether Steam (or the YoYoPlayer) is enabled.
+        /// Whether Steam (or the `YoYoPlayer`) is enabled.
         const STEAM_ENABLED = 0x1000;
 
         /// When enabled, the game will write save data to `%appdata%\GameName`.

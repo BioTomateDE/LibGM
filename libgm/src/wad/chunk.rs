@@ -406,20 +406,16 @@ pub trait GMListChunk: GMChunk {
     // usually also GMElement
     type Element;
 
-    #[must_use]
     fn elements(&self) -> impl Iterator<Item = &Self::Element> {
         self.element_refs().map(|(_ref, elem)| elem)
     }
 
-    #[must_use]
     fn element_refs(&self) -> impl Iterator<Item = (GMRef<Self::Element>, &Self::Element)>;
 
-    #[must_use]
     fn elements_mut(&mut self) -> impl Iterator<Item = &mut Self::Element> {
         self.element_refs_mut().map(|(_ref, elem)| elem)
     }
 
-    #[must_use]
     fn element_refs_mut(
         &mut self,
     ) -> impl Iterator<Item = (GMRef<Self::Element>, &mut Self::Element)>;
