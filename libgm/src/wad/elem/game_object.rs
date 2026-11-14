@@ -65,8 +65,8 @@ pub struct GameObject {
     /// Whether the game object is visible.
     pub visible: bool,
 
-    /// Introduced in 2022.5.
-    pub managed: Option<bool>,
+    /// Introduced in 2022.5, removed in 2026.1 (uses `false` as fallback value).
+    pub managed: bool,
 
     /// Whether the game object is solid.
     pub solid: bool,
@@ -134,9 +134,9 @@ impl GMComplexElement for GameObject {
         let sprite: GMRef<Sprite> = reader.read_resource_by_id()?;
 
         let visible = reader.read_bool32()?;
-        let mut managed: Option<bool> = None;
-        if reader.version >= GMVersion::GM2022_5 {
-            managed = Some(reader.read_bool32()?);
+        let mut managed: bool = false;
+        if reader.version >= GMVersion::GM2022_5 && reader.version < GMVersion::GM2026_1 {
+            managed = reader.read_bool32()?;
         }
         let solid = reader.read_bool32()?;
         let depth = reader.read_i32()?;
@@ -207,7 +207,9 @@ impl GMComplexElement for GameObject {
         writer.write_gm_string(self.name)?;
         writer.write_resource_id(self.sprite);
         writer.write_bool32(self.visible);
-        writer.write_if_ver(&self.managed, "Managed", GMVersion::GM2022_5)?;
+        if writer.version() >= GMVersion::GM2022_5 && writer.version() < GMVersion::GM2026_1 {
+            writer.write_bool32(self.managed);
+        }
         writer.write_bool32(self.solid);
         writer.write_i32(self.depth);
         writer.write_bool32(self.persistent);
