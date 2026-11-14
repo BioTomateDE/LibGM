@@ -277,6 +277,11 @@ pub enum GMVersion {
     GM2024_13,
     GM2024_14,
     GM2024_14_1,
+
+    /// * GameMaker 2026 LTS
+    ///
+    /// Probably the last ever GameMaker version for this WAD file format.
+    GM2026_1,
 }
 
 impl GMVersion {
@@ -334,6 +339,7 @@ impl Display for GMVersion {
             Self::GM2024_13 => "2024.13",
             Self::GM2024_14 => "2024.14",
             Self::GM2024_14_1 => "2024.14.1",
+            Self::GM2026_1 => "2026.1 LTS",
         };
         f.write_str(s)
     }

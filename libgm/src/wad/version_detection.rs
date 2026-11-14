@@ -69,7 +69,7 @@ fn init_by_chunk_existence(chunks: &ChunkMap) -> Option<GMVersion> {
 }
 
 /// HACK: The `Into` trait is still not const unfortunately.
-fn create_version_checks() -> [VersionCheck; 24] {
+fn create_version_checks() -> [VersionCheck; 25] {
     [
         VersionCheck::new(SOND, sond::check_2024_6, GM2022_2, GM2024_6),
         VersionCheck::new(SPRT, sprt::check_2024_6, GM2022_2, GM2024_6),
@@ -94,6 +94,7 @@ fn create_version_checks() -> [VersionCheck; 24] {
         VersionCheck::new(BGND, bgnd::check_2024_14_1, GM2024_13, GM2024_14_1),
         VersionCheck::new(FUNC, func::check_2024_8, Wad14, GM2024_8),
         VersionCheck::new(FONT, font::check_2022_2, GMS2_2_1, GM2022_2),
+        VersionCheck::new(OBJT, objt::check_2026_1, GMS2_3, GM2026_1),
         VersionCheck::new(CODE, code::check_2023_8_and_2024_4, Wad15, GM2024_4),
     ]
 }

@@ -41,6 +41,10 @@ pub enum EventGroup {
     PreCreate,
 }
 
+impl EventGroup {
+    pub const COUNT: u32 = 15;
+}
+
 /// Reference: <https://manual.gamemaker.io/lts/en/The_Asset_Editors/Object_Properties/Object_Events.htm>
 #[derive(Debug, Clone, PartialEq)]
 pub struct EventGroups {
