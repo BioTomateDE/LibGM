@@ -151,7 +151,7 @@ impl Tiles {
 
             // We have two tiles in a row - construct a repeating run.
             // Figure out how far this repeat goes, first.
-            let mut num_repeats: u8 = 2;
+            let mut num_repeats: i32 = 2;
             while i < tile_count {
                 if curr_tile != self.tile_data[i] {
                     break;
@@ -174,10 +174,10 @@ impl Tiles {
 
             // Serialize this repeat run, splitting into 128-length chunks.
             while num_repeats > 0 {
-                let num_to_write: u8 = min(num_repeats, 128);
-                writer.write_u8((num_to_write - 1) | 0x80);
+                let num_to_write: i32 = min(num_repeats, 128);
+                writer.write_u8((num_to_write - 1) as u8 | 0x80);
                 writer.write_u32(last_tile);
-                num_repeats -= num_to_write;
+                num_repeats -= num_to_write as i32;
             }
 
             // Update our current tile to be the one after the run.

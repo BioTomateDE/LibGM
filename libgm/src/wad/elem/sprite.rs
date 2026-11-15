@@ -477,8 +477,8 @@ impl Sprite {
 
         let (width, height) = if writer.version() >= GMVersion::GM2024_6 {
             (
-                self.margin_right as u32 - self.margin_left as u32 + 1,
-                self.margin_bottom as u32 - self.margin_top as u32 + 1,
+                (self.margin_right - self.margin_left) as u32 + 1,
+                (self.margin_bottom - self.margin_top) as u32 + 1,
             )
         } else {
             (self.width, self.height)

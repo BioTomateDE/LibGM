@@ -200,9 +200,11 @@ impl GMElement for GMS2Data {
         let exported_sprite_index = reader.read_u32()?;
         let frame_length = reader.read_i64()?;
 
-        let total_tile_count = tile_count
-            .checked_mul(items_per_tile_count)
-            .ok_or("Total Tile count multiplication overflowed")?;
+        let total_tile_count = tile_count.checked_mul(items_per_tile_count).ok_or_else(||
+            format!(
+                "Total Tile count multiplication overflowed: tile count {tile_count} * items per tile count {items_per_tile_count}"
+            )
+        )?;
 
         let mut tile_ids: Vec<u32> = vec_with_capacity(total_tile_count)?;
         for _ in 0..total_tile_count {

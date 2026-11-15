@@ -57,7 +57,6 @@ impl Codes {
         self.ref_by_name(name, gm_strings).map(|gmref| self.by_ref(gmref).unwrap())
     }
 
-    
     /// Finds a code entry by its mangled name.
     ///
     /// This function exists for convenience, you should try to get code entries via
