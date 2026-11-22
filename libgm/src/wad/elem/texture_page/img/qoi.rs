@@ -155,9 +155,14 @@ pub fn read_header(bytes: &[u8]) -> Result<QoiHeader> {
 pub fn decode(bytes: &[u8]) -> Result<DynamicImage> {
     let header: QoiHeader = read_header(bytes).ctx("reading QOI header")?;
 
-    let pixel_data: &[u8] = bytes
-        .get(12..12 + header.length as usize)
-        .ok_or("Specified QOI data length out of bounds")?;
+    let len_expected = header.length;
+    let len_actual = bytes.len() as u32 - 12;
+    if len_expected != len_actual {
+        bail!(
+            "QOI header specifies length {len_expected}; actually got data with length {len_actual}"
+        );
+    }
+    let pixel_data = &bytes[12..];
 
     let mut pos: usize = 0;
     let mut run: u16 = 0;
