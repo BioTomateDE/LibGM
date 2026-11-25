@@ -10,7 +10,7 @@ use crate::wad::save::writer::DataWriter;
 #[derive(Debug, Clone, PartialEq)]
 pub struct GMS2Data {
     /// Anti-piracy checksum.
-    pub checksum: Blob<[i64; 4]>,
+    pub checksum: Blob<[u64; 4]>,
 
     /// Whether the game was compiled as a release build ("Create Executable")
     /// rather than a test build ("Run" or "Debug").
@@ -50,24 +50,22 @@ impl Default for GMS2Data {
 
 impl GeneralInfo {
     pub(super) fn read_gms2_data(&self, reader: &mut DataReader) -> Result<GMS2Data> {
-        let timestamp: i64 = self.creation_timestamp.timestamp();
-
         let mut release_build: bool = true;
-        let seed: i32 = timestamp as i32;
+        let seed: i32 = self.creation_timestamp as i32;
         let mut rng = DotnetRng::new(seed);
 
-        let first_expected: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
-        let first_actual = reader.read_i64()?;
+        let first_expected: u64 = ((rng.next() as u64) << 32) | rng.next() as u64;
+        let first_actual = reader.read_u64()?;
         if first_actual != first_expected {
             bail!("Unexpected checksum part 1: expected {first_expected}; got {first_actual}");
         }
 
-        let info_location: i32 = self.get_info_location(timestamp);
-        let mut checksum = [0_i64; 4];
+        let info_location: i32 = self.get_info_location(self.creation_timestamp);
+        let mut checksum = [0u64; 4];
 
         for i in 0..4 {
             if i == info_location {
-                let curr = reader.read_i64()?;
+                let curr = reader.read_u64()?;
                 checksum[i as usize] = curr;
 
                 if curr != self.get_info_number(first_expected, true) {
@@ -90,7 +88,7 @@ impl GeneralInfo {
                     bail!("Unexpected random UID #3: expected {expected3}, got {actual3}");
                 }
 
-                checksum[i as usize] = (i64::from(actual2) << 32) | i64::from(actual3);
+                checksum[i as usize] = (actual2 as u64) << 32 | actual3 as u64;
             }
         }
 
@@ -111,16 +109,15 @@ impl GeneralInfo {
         let gms2_info: &GMS2Data =
             self.gms2_data.as_ref().ok_or("GMS2 Data not set in General Info")?;
 
-        let timestamp: i64 = self.creation_timestamp.timestamp();
-        let seed: i32 = timestamp as i32;
+        let seed: i32 = self.creation_timestamp as i32;
         let mut rng = DotnetRng::new(seed);
-        let first_random: i64 = (i64::from(rng.next()) << 32) | i64::from(rng.next());
+        let first_random: u64 = ((rng.next() as u64) << 32) | rng.next() as u64;
         let info_number = self.get_info_number(first_random, gms2_info.release_build);
-        let info_location: i32 = self.get_info_location(timestamp);
-        writer.write_i64(first_random);
+        let info_location: i32 = self.get_info_location(self.creation_timestamp);
+        writer.write_u64(first_random);
         for i in 0..4 {
             if i == info_location {
-                writer.write_i64(info_number);
+                writer.write_u64(info_number);
             } else {
                 let first = rng.next();
                 let second = rng.next();
@@ -136,42 +133,43 @@ impl GeneralInfo {
     }
 
     // random bullshit go!
-    const fn get_info_location(&self, timestamp: i64) -> i32 {
+    const fn get_info_location(&self, timestamp: u64) -> i32 {
         let t = (timestamp as u16 / 7) as i32;
         let g = self.game_id.wrapping_sub(self.window_width) as i32;
         let r = self.room_order.len() as i32;
         (t + g + r).abs() % 4
     }
 
-    fn get_info_number(&self, first_random: i64, offset: bool) -> i64 {
-        let flags = self.flags.bits() as i64;
-        let gid = self.game_id as i64;
-        let ww = self.window_width as i64;
-        let wh = self.window_height as i64;
+    const fn get_info_number(&self, first_random: u64, offset: bool) -> u64 {
+        let flags = self.flags.bits() as u64;
+        let gid = self.game_id as u64;
+        let ww = self.window_width as u64;
+        let wh = self.window_height as u64;
 
-        let mut info_number: i64 = self.creation_timestamp.timestamp();
+        let mut info_number: u64 = self.creation_timestamp;
         if offset {
-            info_number -= 1000;
+            info_number = (info_number as i64 - 1000) as u64;
         }
         info_number = Self::uid_bitmush(info_number);
         info_number ^= first_random;
         info_number = !info_number;
         info_number ^= (gid << 32) | gid;
         info_number ^= (ww + flags) << 48 | (wh + flags) << 32 | (wh + flags) << 16 | (ww + flags);
-        info_number ^= i64::from(self.wad_version);
+        info_number ^= self.wad_version as u64;
         info_number
     }
 
-    const fn uid_bitmush(info_number: i64) -> i64 {
-        let mut temp: u64 = info_number as u64;
-        temp = (temp << 56 & 0xFF00_0000_0000_0000)
-            | (temp >> 8 & 0x00FF_0000_0000_0000)
-            | (temp << 32 & 0x0000_FF00_0000_0000)
-            | (temp >> 16 & 0x0000_00FF_0000_0000)
-            | (temp << 8 & 0x0000_0000_FF00_0000)
-            | (temp >> 24 & 0x0000_0000_00FF_0000)
-            | (temp >> 16 & 0x0000_0000_0000_FF00)
-            | (temp >> 32 & 0x0000_0000_0000_00FF);
-        temp as i64
+    const fn uid_bitmush(num: u64) -> u64 {
+        #[expect(clippy::needless_late_init)]
+        let new; // nice alignment
+        new = (0xFF00_0000_0000_0000 & num << 56)
+            | (0x00FF_0000_0000_0000 & num >> 8)
+            | (0x0000_FF00_0000_0000 & num << 32)
+            | (0x0000_00FF_0000_0000 & num >> 16)
+            | (0x0000_0000_FF00_0000 & num << 8)
+            | (0x0000_0000_00FF_0000 & num >> 24)
+            | (0x0000_0000_0000_FF00 & num >> 16)
+            | (0x0000_0000_0000_00FF & num >> 32);
+        new
     }
 }

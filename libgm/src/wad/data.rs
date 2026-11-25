@@ -225,7 +225,7 @@ impl Default for GMData {
             flags: Flags::SCALE | Flags::SHOW_CURSOR,
             license_crc32: 1337,
             license_md5: Blob(*b"GnuPublicLicense"),
-            creation_timestamp: chrono::DateTime::default(), // set this urself if you want to lol
+            creation_timestamp: 0,
             display_name: strings.make("LibGM: The Game"),
             function_classifications: FunctionClassifications::empty(),
             steam_appid: 0,

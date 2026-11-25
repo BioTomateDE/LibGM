@@ -3,9 +3,6 @@ mod flags;
 mod function_classifications;
 mod gms2;
 
-use chrono::DateTime;
-use chrono::Utc;
-
 pub use self::flags::Flags;
 pub use self::function_classifications::FunctionClassifications;
 pub use self::gms2::GMS2Data;
@@ -114,7 +111,10 @@ pub struct GeneralInfo {
     pub license_md5: Blob<[u8; 16]>,
 
     /// The timestamp the game was compiled at.
-    pub creation_timestamp: DateTime<Utc>,
+    ///
+    /// This is represented by the number of (non-leap) seconds since
+    /// 1970-01-01 00:00:00 UTC, also known as the **Unix epoch**.
+    pub creation_timestamp: u64,
 
     /// The name that gets displayed in the window title.
     pub display_name: GMRef<String>,
@@ -170,10 +170,7 @@ impl GMElement for GeneralInfo {
             .ok_or_else(|| format!("Invalid GEN8 Flags {flags_raw:08X}"))?;
         let license_crc32 = reader.read_u32()?;
         let license_md5: [u8; 16] = *reader.read_bytes_const().ctx("reading license (MD5)")?;
-        let creation_timestamp = reader.read_i64()?;
-        let creation_timestamp: DateTime<Utc> =
-            DateTime::from_timestamp_secs(creation_timestamp)
-                .ok_or_else(|| format!("Invalid Creation Timestamp {creation_timestamp}"))?;
+        let creation_timestamp = reader.read_u64()?;
         let display_name: GMRef<String> = reader.read_gm_string()?;
         let active_targets = reader.read_u64()?;
         reader.assert_int(active_targets, 0, "Active Targets")?;
@@ -234,7 +231,7 @@ impl GMElement for GeneralInfo {
         writer.write_u32(self.flags.bits());
         writer.write_u32(self.license_crc32);
         writer.write_bytes(&*self.license_md5);
-        writer.write_i64(self.creation_timestamp.timestamp());
+        writer.write_u64(self.creation_timestamp);
         writer.write_gm_string(self.display_name)?;
         writer.write_u64(0); // "Active targets"
         writer.write_u64(self.function_classifications.bits());
@@ -269,7 +266,7 @@ impl Default for GeneralInfo {
             flags: Flags::empty(),
             license_crc32: 69420,
             license_md5: Blob([69; 16]),
-            creation_timestamp: DateTime::default(),
+            creation_timestamp: 0,
             display_name: GMRef::none(),
             function_classifications: FunctionClassifications::empty(),
             steam_appid: 0,
