@@ -31,7 +31,7 @@ use crate::wad::elem::function::Function;
 /// For more information on GML, see the [module level documentation].
 ///
 /// [module level documentation]: crate::gml
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Instruction {
     /// Pops two values from the stack, performs a mathematical,
     /// bitwise or logical operation on them, and pushes the result.

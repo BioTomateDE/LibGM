@@ -248,7 +248,7 @@ fn splice_instructions(
     }
 
     // now perform the actual splice
-    let iter = haystack.splice(start..end, replace_with.iter().cloned());
+    let iter = haystack.splice(start..end, replace_with.iter().copied());
     if needs_result { Ok(Some(iter.collect())) } else { Ok(None) }
 }
 
